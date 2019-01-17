@@ -17,6 +17,11 @@ let RIGHT_ARROW_CODE = 39
 let MOVE_LEFT = 'left'
 let MOVE_RIGHT = 'right'
 
+// HTML selectors
+let appDiv = document.getElementById('app')
+// declare as global to acces to it from different context
+let restartBtn
+
 // Preload game images
 let imageFilenames = ['enemy.png', 'stars.png', 'player.png']
 let images = {}
@@ -28,8 +33,18 @@ imageFilenames.forEach(function (imgName) {
 })
 
 // This section is where you will be doing most of your coding
-class Enemy {
+
+// Super class for Player and Enemy classes
+// DONE:
+class Entity {
+  render (ctx) {
+    this.domElement.style.left = this.x + 'px'
+    this.domElement.style.top = this.y + 'px'
+  }
+}
+class Enemy extends Entity {
   constructor (root, xPos) {
+    super()
     this.root = root
     this.x = xPos
     this.y = -ENEMY_HEIGHT
@@ -43,17 +58,19 @@ class Enemy {
 
     this.domElement = img
     // Each enemy should have a different speed
-    this.speed = Math.random() / 2 + 0.25
+    // FINISH:
+    // this.speed = Math.random() / 2 + 0.25
+    this.speed = Math.random() / 2
   }
 
   update (timeDiff) {
     this.y = this.y + timeDiff * this.speed
   }
 
-  render (ctx) {
-    this.domElement.style.left = this.x + 'px'
-    this.domElement.style.top = this.y + 'px'
-  }
+  // render (ctx) {
+  //   this.domElement.style.left = this.x + 'px'
+  //   this.domElement.style.top = this.y + 'px'
+  // }
 
   destroy () {
     // When an enemy reaches the end of the screen, the corresponding DOM element should be destroyed
@@ -61,8 +78,9 @@ class Enemy {
   }
 }
 
-class Player {
+class Player extends Entity {
   constructor (root) {
+    super()
     this.root = root
     this.x = 2 * PLAYER_WIDTH
     this.y = GAME_HEIGHT - PLAYER_HEIGHT - 10
@@ -88,10 +106,10 @@ class Player {
     }
   }
 
-  render (ctx) {
-    this.domElement.style.left = this.x + 'px'
-    this.domElement.style.top = this.y + 'px'
-  }
+  // render (ctx) {
+  //   this.domElement.style.left = this.x + 'px'
+  //   this.domElement.style.top = this.y + 'px'
+  // }
 }
 
 class Text {
@@ -113,6 +131,41 @@ class Text {
   // This method is called by the game engine when left/right arrows are pressed
   update (txt) {
     this.domElement.innerText = txt
+  }
+}
+
+// super class for Buttons
+class Button {
+  constructor (root, xPos, yPos) {
+    this.root = root
+
+    let button = document.createElement('button')
+    button.style.position = 'absolute'
+    button.style.left = xPos + 'px'
+    button.style.top = yPos + 'px'
+    button.style.zIndex = 10
+    root.appendChild(button)
+    this.domElement = button
+  }
+}
+
+class RestartButton extends Button {
+  constructor (root, xPos, yPos) {
+    super(root, xPos, yPos)
+
+    let btn = this.domElement
+    btn.innerText = 'RESTART'
+    btn.style.fontSize = '2em'
+    btn.style.zIndex = 10
+    btn.style.color = 'beige'
+    btn.style.background = 'brown'
+    btn.style.border = '2px solid beige'
+    btn.style.borderRadius = '10px'
+    // this.domElement.style.font = 'bold 30px Impact'
+  }
+
+  destroy () {
+    this.root.removeChild(this.domElement)
   }
 }
 
@@ -149,6 +202,7 @@ class Engine {
 
     // Since gameLoop will be called out of context, bind it once here.
     this.gameLoop = this.gameLoop.bind(this)
+    this.restart = this.restart.bind(this)
   }
 
   /*
@@ -174,10 +228,22 @@ class Engine {
     let enemySpots = GAME_WIDTH / ENEMY_WIDTH
 
     let enemySpot
-    // Keep looping until we find a free enemy spot at random
+
     while (!enemySpot || this.enemies[enemySpot]) {
       enemySpot = Math.floor(Math.random() * enemySpots)
+      // if (enemySpot === 0) {
+      //   // debugger
+      // }
     }
+    // debugger
+    // Keep looping until we find a free enemy spot at random
+    // DONE:
+    // while (typeof (obj) === 'number' || this.enemies[enemySpot]) {
+    //   enemySpot = Math.floor(Math.random() * enemySpots)
+    //   // if (enemySpot === 0) {
+    //   //   // debugger
+    //   // }
+    // }
 
     this.enemies[enemySpot] = new Enemy(this.root, enemySpot * ENEMY_WIDTH)
   }
@@ -197,6 +263,28 @@ class Engine {
     // Listen for keyboard left/right and update the player
     document.addEventListener('keydown', keydownHandler)
 
+    this.gameLoop()
+  }
+
+  restart () {
+    // *db* Remove restart buttom
+    restartBtn.destroy()
+
+    // *db* remove enemies from DOM and clear enemies array
+    this.enemies.forEach((enemy) => {
+      enemy.destroy()
+    })
+    this.enemies = []
+
+    // Set score to zero and start time to Now
+    this.score = 0
+    this.lastFrame = Date.now()
+
+    // place player at the start position
+    this.player.x = 2 * PLAYER_WIDTH
+
+    debugger
+    // Run
     this.gameLoop()
   }
 
@@ -242,9 +330,12 @@ class Engine {
     this.setupEnemies()
 
     // Check if player is dead
+    // debugger
     if (this.isPlayerDead()) {
       // If they are dead, then it's game over!
       this.info.update(this.score + ' GAME OVER')
+      restartBtn = new RestartButton(appDiv, 120, 200)
+      restartBtn.domElement.addEventListener('click', this.restart)
     } else {
       // If player is not dead, then draw the score
       this.info.update(this.score)
@@ -256,11 +347,20 @@ class Engine {
   }
 
   isPlayerDead () {
-    // TODO: fix this function!
-    return false
+    // DONE: fix this function!
+    // debugger
+    // console.log()
+    return this.enemies.some((enemy, enemyIdx) => {
+      if (enemy.y + ENEMY_HEIGHT >= this.player.y && enemy.x === this.player.x) {
+        // debugger
+        // console.log('overlaped')
+        return true
+      }
+    })
+    // return false
   }
 }
 
 // This section will start the game
-let gameEngine = new Engine(document.getElementById('app'))
+let gameEngine = new Engine(appDiv)
 gameEngine.start()

@@ -1,5 +1,7 @@
 # Object Oriented Programming Game Project
 
+(c) DecodeMTL 2019
+
 <h2 align="center">I CAN HAZ CHEEZBURGER?!??</h2>
 <p align="center"><img src="screenshot.png"></p>
 
